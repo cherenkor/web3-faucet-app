@@ -7,7 +7,13 @@ export const loadContract = async (contractName: string, provider: any) => {
 
   _contract.setProvider(provider);
 
-  const deployedContract = await _contract.deployed();
+  let deployedContract = null;
+
+  try {
+     deployedContract = await _contract.deployed();
+  } catch (ex) {
+    console.error(ex);
+  }
 
   return deployedContract;
 };
