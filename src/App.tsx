@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Web3 from "web3";
 import detectEthereumProvider from "@metamask/detect-provider";
+import cn from "classnames";
 
 import "./App.css";
 import { loadContract } from "./utils/load-contract";
@@ -11,6 +12,47 @@ function App() {
   const [provider, setProvider] = useState<any | null>(null);
   const [currentAccount, setCurrentAccount] = useState<string>();
   const [balance, setBalance] = useState<string>();
+  const [isDonating, setIsDonating] = useState(false);
+  const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  const loadBalance = useCallback(async () => {
+    const contractBalance = await web3?.eth.getBalance(contract.address);
+    const balanceInEther = web3?.utils.fromWei(contractBalance || "0", "ether");
+    setBalance(balanceInEther);
+  }, [contract, web3]);
+
+  const addFunds = useCallback(async () => {
+    setIsDonating(true);
+
+    try {
+      await contract.addFunds({
+        from: currentAccount,
+        value: web3?.utils.toWei("1", "ether"),
+      });
+      loadBalance();
+    } catch (ex) {
+      console.error(ex);
+      alert("Something went wrong. Please check console for logs.");
+    } finally {
+      setIsDonating(false);
+    }
+  }, [currentAccount, contract, web3, loadBalance]);
+
+  const withdrawFunds = useCallback(async () => {
+    setIsWithdrawing(true);
+
+    try {
+      await contract.withdraw(web3?.utils.toWei("0.1", "ether"), {
+        from: currentAccount,
+      });
+      loadBalance();
+    } catch (ex) {
+      console.error(ex);
+      alert("Something went wrong. Please check console for logs.");
+    } finally {
+      setIsWithdrawing(false);
+    }
+  }, [currentAccount, loadBalance, contract, web3]);
 
   useEffect(() => {
     const loadProvider = async () => {
@@ -28,7 +70,6 @@ function App() {
 
     loadProvider();
   }, []);
-  console.log({ contract, provider });
 
   useEffect(() => {
     const getAccount = async () => {
@@ -45,17 +86,10 @@ function App() {
   }, [web3]);
 
   useEffect(() => {
-    const loadBalance = async () => {
-      const contractBalance = await web3?.eth.getBalance(contract.address);
-      const balanceInEther = web3?.utils.fromWei(
-        contractBalance || "0",
-        "ether"
-      );
-      setBalance(balanceInEther);
-    };
+    loadBalance();
 
     if (contract && web3) loadBalance();
-  }, [contract, web3]);
+  }, [loadBalance, contract, web3]);
 
   return (
     <>
@@ -89,8 +123,22 @@ function App() {
                 Current Balance: <strong>{balance}</strong> ETH
               </div>
 
-              <button className="button is-link mr-2">Donate</button>
-              <button className="button is-primary">Withdraw</button>
+              <button
+                onClick={() => addFunds()}
+                className={cn("button is-link mr-2", {
+                  "is-loading": isDonating,
+                })}
+              >
+                Donate 1eth
+              </button>
+              <button
+                onClick={() => withdrawFunds()}
+                className={cn("button is-primary", {
+                  "is-loading": isWithdrawing,
+                })}
+              >
+                Withdraw
+              </button>
             </>
           )}
         </div>
