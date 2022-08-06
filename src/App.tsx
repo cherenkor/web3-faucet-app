@@ -9,7 +9,8 @@ function App() {
   const [web3, setWeb3] = useState<Web3 | null>(null);
   const [contract, setContract] = useState<any | null>(null);
   const [provider, setProvider] = useState<any | null>(null);
-  const [currentAccount, setCurrentAccount] = useState<string | null>(null);
+  const [currentAccount, setCurrentAccount] = useState<string>();
+  const [balance, setBalance] = useState<string>();
 
   useEffect(() => {
     const loadProvider = async () => {
@@ -43,6 +44,19 @@ function App() {
     }
   }, [web3]);
 
+  useEffect(() => {
+    const loadBalance = async () => {
+      const contractBalance = await web3?.eth.getBalance(contract.address);
+      const balanceInEther = web3?.utils.fromWei(
+        contractBalance || "0",
+        "ether"
+      );
+      setBalance(balanceInEther);
+    };
+
+    if (contract && web3) loadBalance();
+  }, [contract, web3]);
+
   return (
     <>
       <div className="faucet-wrapper">
@@ -69,12 +83,16 @@ function App() {
               <div>Loading info...</div>
             )}
           </div>
-          <div className="balance-view is-size-2 my-4">
-            Current Balance: <strong>10</strong>ETH
-          </div>
+          {!!contract && (
+            <>
+              <div className="balance-view is-size-2 my-4">
+                Current Balance: <strong>{balance}</strong> ETH
+              </div>
 
-          <button className="button is-link mr-2">Donate</button>
-          <button className="button is-primary">Withdraw</button>
+              <button className="button is-link mr-2">Donate</button>
+              <button className="button is-primary">Withdraw</button>
+            </>
+          )}
         </div>
       </div>
     </>
